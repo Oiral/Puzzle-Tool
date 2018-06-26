@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-public enum EditorChanger { Change,Remove,Add};
+public enum EditorChanger { Change,Remove,Add,BlockAdd,BlockRemove};
 
 public class BlockSelectorScript : MonoBehaviour {
 
@@ -14,6 +14,7 @@ public class BlockSelectorScript : MonoBehaviour {
     public Transform addGridParent;
 
     public GameObject tilePrefab;
+    public GameObject pushablePrefab;
 
     public bool modifyGrid = false;
 
@@ -35,34 +36,43 @@ public class BlockSelectorScript : MonoBehaviour {
                 action = EditorChanger.Change;
                 RemoveTileGrid();
                 break;
-            case "Goal":
 
+            case "Goal":
                 selectedType = TileType.Goal;
                 action = EditorChanger.Change;
                 RemoveTileGrid();
                 break;
-            case "Hole":
 
+            case "Hole":
                 selectedType = TileType.Hole;
                 action = EditorChanger.Change;
                 RemoveTileGrid();
                 break;
-            case "Block":
 
+            case "Block":
                 selectedType = TileType.Block;
                 action = EditorChanger.Change;
                 Log(changeTo);
                 RemoveTileGrid();
                 break;
 
+                
             case "Remove":
                 action = EditorChanger.Remove;
                 RemoveTileGrid();
                 break;
+
             case "Add":
                 action = EditorChanger.Add;
                 AddSelected();
                 break;
+
+            case "AddBlock":
+                action = EditorChanger.BlockAdd;
+                RemoveTileGrid();
+                break;
+                
+
             default:
                 break;
         }

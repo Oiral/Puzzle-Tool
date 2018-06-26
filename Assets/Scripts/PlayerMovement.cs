@@ -41,8 +41,10 @@ public class PlayerMovement : MonoBehaviour {
         {
             if (CheckDirection(targetTile.transform.position, tile.transform.position) == dir)
             {
-                
-                switch (tile.GetComponentInParent<TileScript>().Type)
+
+                TileScript currTileScript = tile.GetComponentInParent<TileScript>();
+
+                switch (currTileScript.Type)
                 {
                     case TileType.Default:
                         MovePlayer(tile);
@@ -65,6 +67,18 @@ public class PlayerMovement : MonoBehaviour {
                         //LevelManagerScript.instance.NextLevel();
                         return true;
 
+                    case TileType.Pushable:
+
+                        if (currTileScript.pushableCube.GetComponent<PlayerMovement>().MovePlayer(dir))
+                        {
+                            MovePlayer(tile);
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                        
                     default:
                         return false;
                 }

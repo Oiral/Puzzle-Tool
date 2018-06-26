@@ -9,7 +9,7 @@ public class ChangeGridScript : MonoBehaviour {
 
         RaycastHit hit;
 
-        if (Input.GetMouseButton(0)){
+        if (Input.GetMouseButtonDown(0)){
             Ray ray = GetComponent<Camera>().ScreenPointToRay(Input.mousePosition);
 
             if (Physics.Raycast(ray, out hit))
@@ -24,12 +24,17 @@ public class ChangeGridScript : MonoBehaviour {
                     case EditorChanger.Remove:
                         RemoveBlock(objectHit.gameObject);
                         break;
+
                     case EditorChanger.Add:
                         if (objectHit.CompareTag("Ghost"))
                         {
                             Debug.Log("ghost");
                             SpawnTile(objectHit.gameObject);
                         }
+                        break;
+
+                    case EditorChanger.BlockAdd:
+                        SpawnPushableBlock(objectHit.gameObject);
                         break;
                     default:
                         break;
@@ -121,5 +126,21 @@ public class ChangeGridScript : MonoBehaviour {
         //Destroy the tile clicked
         Destroy(blockToRemove);
 
+    }
+
+    public void SpawnPushableBlock(GameObject tileToSpawnOn)
+    {
+        TileScript tileScript = tileToSpawnOn.GetComponent<TileScript>();
+
+        switch (tileScript.Type)
+        {
+            case TileType.Default:
+                GameObject pushableTemp = Instantiate(BlockSelectorScript.instance.pushablePrefab, tileScript.topPoint.transform.position, Quaternion.identity);
+                pushableTemp.GetComponent<PlayerMovement>().targetTile = tileScript.topPoint.gameObject;
+
+                break;
+            default:
+                break;
+        }
     }
 }

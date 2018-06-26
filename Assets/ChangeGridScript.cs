@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class ChangeGridScript : MonoBehaviour {
-
-	
 	
 	// Update is called once per frame
 	void Update () {
@@ -18,13 +16,60 @@ public class ChangeGridScript : MonoBehaviour {
             {
                 Transform objectHit = hit.transform;
 
-                SetBlockType(BlockSelectorScript.instance.selectedType, objectHit.gameObject);
-                
+                switch (BlockSelectorScript.instance.action)
+                {
+                    case EditorChanger.Change:
+                        SetBlockType(BlockSelectorScript.instance.selectedType, objectHit.gameObject);
+                        break;
+                    case EditorChanger.Remove:
+                        RemoveBlock(objectHit.gameObject);
+                        break;
+                    case EditorChanger.Add:
+                        if (objectHit.CompareTag("Ghost"))
+                        {
+                            Debug.Log("ghost");
+                            List<GameObject> connections = new List<GameObject>();
+
+                            foreach (GameObject tileObject in objectHit.transform.GetComponent<GhostBlockScript>().refBlocks)
+                            {
+                                connections.Add(tileObject.GetComponent<TileScript>().topPoint.gameObject);
+                            }
+                            //Spawn in the block
+
+                            GameObject  spawnedTile = Instantiate(BlockSelectorScript.instance.tilePrefab,GameObject.FindGameObjectWithTag("Board").transform);
+                            //Set the connections
+                            TileConnectionsScript spawnedTileConnections = spawnedTile.GetComponentInChildren<TileConnectionsScript>();
+                            spawnedTileConnections.connections = connections;
+
+                            //Set each connection to be connected to this one
+                            foreach (GameObject otherCons in connections)
+                            {
+                                otherCons.GetComponent<TileConnectionsScript>().connections.Add(spawnedTile.GetComponent<TileScript>().topPoint.gameObject);
+                            }
+
+                            //Set the position
+
+                            spawnedTile.transform.position = objectHit.transform.position;
+
+                            //Set the name
+                            StartCoroutine(ResetGhostGrid());
+
+                        }
+                        break;
+                    default:
+                        break;
+                }
                 // Do something with the object that was hit by the raycast.
             }
         }
     }
 
+    IEnumerator ResetGhostGrid()
+    {
+        BlockSelectorScript.instance.RemoveTileGrid();
+        yield return new WaitForEndOfFrame();
+        BlockSelectorScript.instance.AddSelected();
+    }
 
     public void SetBlockType(TileType type, GameObject tile)
     {
@@ -51,4 +96,24 @@ public class ChangeGridScript : MonoBehaviour {
         
     }
 
+    public void RemoveBlock(GameObject blockToRemove)
+    {
+        TileConnectionsScript connectionsScript = blockToRemove.GetComponentInChildren<TileConnectionsScript>();
+
+        //remove the connections going to this block
+        foreach (GameObject connection in connectionsScript.connections)
+        {
+            GameObject topConnectionPoint = blockToRemove.GetComponent<TileScript>().topPoint.gameObject;
+
+            //check if it is connected
+            if (connection.GetComponentInChildren<TileConnectionsScript>().connections.Contains(topConnectionPoint))
+            {
+                connection.GetComponentInChildren<TileConnectionsScript>().connections.Remove(topConnectionPoint);
+            }
+        }
+
+        //Destroy the tile clicked
+        Destroy(blockToRemove);
+
+    }
 }

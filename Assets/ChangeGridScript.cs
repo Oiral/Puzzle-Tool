@@ -9,7 +9,7 @@ public class ChangeGridScript : MonoBehaviour {
 
         RaycastHit hit;
 
-        if (Input.GetMouseButtonDown(0)){
+        if (Input.GetMouseButton(0)){
             Ray ray = GetComponent<Camera>().ScreenPointToRay(Input.mousePosition);
 
             if (Physics.Raycast(ray, out hit))
@@ -28,32 +28,7 @@ public class ChangeGridScript : MonoBehaviour {
                         if (objectHit.CompareTag("Ghost"))
                         {
                             Debug.Log("ghost");
-                            List<GameObject> connections = new List<GameObject>();
-
-                            foreach (GameObject tileObject in objectHit.transform.GetComponent<GhostBlockScript>().refBlocks)
-                            {
-                                connections.Add(tileObject.GetComponent<TileScript>().topPoint.gameObject);
-                            }
-                            //Spawn in the block
-
-                            GameObject  spawnedTile = Instantiate(BlockSelectorScript.instance.tilePrefab,GameObject.FindGameObjectWithTag("Board").transform);
-                            //Set the connections
-                            TileConnectionsScript spawnedTileConnections = spawnedTile.GetComponentInChildren<TileConnectionsScript>();
-                            spawnedTileConnections.connections = connections;
-
-                            //Set each connection to be connected to this one
-                            foreach (GameObject otherCons in connections)
-                            {
-                                otherCons.GetComponent<TileConnectionsScript>().connections.Add(spawnedTile.GetComponent<TileScript>().topPoint.gameObject);
-                            }
-
-                            //Set the position
-
-                            spawnedTile.transform.position = objectHit.transform.position;
-
-                            //Set the name
-                            StartCoroutine(ResetGhostGrid());
-
+                            SpawnTile(objectHit.gameObject);
                         }
                         break;
                     default:
@@ -62,6 +37,37 @@ public class ChangeGridScript : MonoBehaviour {
                 // Do something with the object that was hit by the raycast.
             }
         }
+    }
+
+    void SpawnTile(GameObject ghostBlockToChange)
+    {
+        List<GameObject> connections = new List<GameObject>();
+
+        foreach (GameObject tileObject in ghostBlockToChange.transform.GetComponent<GhostBlockScript>().refBlocks)
+        {
+            connections.Add(tileObject.GetComponent<TileScript>().topPoint.gameObject);
+        }
+        //Spawn in the block
+        GameObject spawnedTile = Instantiate(BlockSelectorScript.instance.tilePrefab, GameObject.FindGameObjectWithTag("Board").transform);
+
+        //Set the connections
+        TileConnectionsScript spawnedTileConnections = spawnedTile.GetComponentInChildren<TileConnectionsScript>();
+        spawnedTileConnections.connections = connections;
+
+        //Set each connection to be connected to this one
+        foreach (GameObject otherCons in connections)
+        {
+            otherCons.GetComponent<TileConnectionsScript>().connections.Add(spawnedTile.GetComponent<TileScript>().topPoint.gameObject);
+        }
+
+        //Set the position
+
+        spawnedTile.transform.position = ghostBlockToChange.transform.position;
+
+        //Set the name
+        spawnedTile.transform.name = "Cube (" + spawnedTile.transform.position.x + "," + spawnedTile.transform.position.z + ")";
+
+        StartCoroutine(ResetGhostGrid());
     }
 
     IEnumerator ResetGhostGrid()

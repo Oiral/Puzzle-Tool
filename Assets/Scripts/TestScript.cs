@@ -18,7 +18,6 @@ public class TestScript : MonoBehaviour {
         {Direction.West, new int[2]{-1,0} }
     };
 
-
     private void Start()
     {
         tiles = new GameObject[xAmount, zAmount];

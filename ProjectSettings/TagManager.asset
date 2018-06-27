@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Board
   - Ghost
+  - Tile
   layers:
   - Default
   - TransparentFX

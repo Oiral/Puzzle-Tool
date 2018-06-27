@@ -16,8 +16,6 @@ public class BlockSelectorScript : MonoBehaviour {
     public GameObject tilePrefab;
     public GameObject pushablePrefab;
 
-    public bool modifyGrid = false;
-
     public static BlockSelectorScript instance;
 
     public Text logText;

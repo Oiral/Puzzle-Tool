@@ -20,6 +20,10 @@ public class PlayerMovement : MonoBehaviour {
 
     private void Start()
     {
+        if (targetTile == null)
+        {
+            targetTile = GameObject.FindGameObjectWithTag("Board").GetComponentsInChildren<TileScript>()[0].topPoint.gameObject;
+        }
         startingTile = targetTile;
         //turtleAnimator = GetComponentInChildren<Animator>();
     }

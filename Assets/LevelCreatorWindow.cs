@@ -14,6 +14,8 @@ public class LevelCreatorWindow : EditorWindow
 
     Vector2 scrollPos = Vector2.zero;
 
+    bool gridBeenBuilt = false;
+
     bool ghostGridActive;
     bool ghostGridLastCheck;
     GameObject ghostGridParent;
@@ -28,7 +30,7 @@ public class LevelCreatorWindow : EditorWindow
 
     GameObject tileprefab;
     GameObject board;
-
+    GameObject pushablePrefab;
 
     Vector2 gridSetup;
 
@@ -75,7 +77,8 @@ public class LevelCreatorWindow : EditorWindow
         //Check if there is a parent for the ghost grid
         if (ghostGridParent == null)
         {
-            ghostGridParent = Instantiate(new GameObject());
+            ghostGridParent = new GameObject();
+            ghostGridParent.transform.name = "Ghost Grid Parent";
         }
         //check if we need to spawn in the ghost grid
         if (ghostGridActive != ghostGridLastCheck)
@@ -94,6 +97,12 @@ public class LevelCreatorWindow : EditorWindow
         }
         ghostGridLastCheck = ghostGridActive;
 
+
+        //check if there is a level in the scene
+        if (GameObject.FindGameObjectWithTag("Board") == null) 
+        {
+            gridBeenBuilt = false;
+        }
     }
 
 
@@ -109,14 +118,16 @@ public class LevelCreatorWindow : EditorWindow
                 {
                     case EditorActions.Change:
                         SetBlockType(currentTileTypeAction, activeObject);
+                        Selection.SetActiveObjectWithContext(null,new Object());
                         break;
                     case EditorActions.Remove:
-                        //RemoveBlock(activeObject);
+                        RemoveBlock(activeObject);
+                        Selection.activeObject = null;
                         Debug.Log("Removing Block");
                         break;
 
                     case EditorActions.BlockAdd:
-                        //SpawnPushableBlock(activeObject);
+                        SpawnPushableBlock(activeObject);
                         break;
                     default:
                         break;
@@ -124,7 +135,8 @@ public class LevelCreatorWindow : EditorWindow
             }else if (activeObject.CompareTag("Ghost") && currentAction == EditorActions.Add)
             {
                 Debug.Log("ghost");
-                //SpawnTile(activeObject);
+                SpawnTile(activeObject);
+                Selection.activeObject = null;
             }
         }
     }
@@ -151,6 +163,7 @@ public class LevelCreatorWindow : EditorWindow
 
     void SpawnBaseLevel()
     {
+        gridBeenBuilt = true;
         //Check if there is a board
         if (GameObject.FindGameObjectWithTag("Board"))
         {
@@ -205,19 +218,25 @@ public class LevelCreatorWindow : EditorWindow
 
     void GenerateGhostGrid()
     {
-        foreach (TileScript tile in GameObject.FindGameObjectWithTag("Board").GetComponentsInChildren<TileScript>())
+        if (gridBeenBuilt)
         {
-            GenerateGhostTile(tile.gameObject);
+            foreach (TileScript tile in GameObject.FindGameObjectWithTag("Board").GetComponentsInChildren<TileScript>())
+            {
+                GenerateGhostTile(tile.gameObject);
+            }
         }
     }
 
     public void RemoveGhostGrid()
     {
-        foreach (Transform ghostTile in ghostGridParent.GetComponentsInChildren<Transform>())
+        if (gridBeenBuilt)
         {
-            if (ghostTile != ghostGridParent.transform)
+            foreach (Transform ghostTile in ghostGridParent.GetComponentsInChildren<Transform>())
             {
-                DestroyImmediate(ghostTile.gameObject);
+                if (ghostTile != ghostGridParent.transform)
+                {
+                    DestroyImmediate(ghostTile.gameObject);
+                }
             }
         }
     }
@@ -353,6 +372,79 @@ public class LevelCreatorWindow : EditorWindow
         //if so remove that direction and add this tile to its ref blocks
     }
 
+    public void RemoveBlock(GameObject blockToRemove)
+    {
+        TileConnectionsScript connectionsScript = blockToRemove.GetComponentInChildren<TileConnectionsScript>();
+
+        //remove the connections going to this block
+        foreach (GameObject connection in connectionsScript.connections)
+        {
+            GameObject topConnectionPoint = blockToRemove.GetComponent<TileScript>().topPoint.gameObject;
+
+            //check if it is connected
+            if (connection.GetComponentInChildren<TileConnectionsScript>().connections.Contains(topConnectionPoint))
+            {
+                connection.GetComponentInChildren<TileConnectionsScript>().connections.Remove(topConnectionPoint);
+            }
+        }
+
+        //Destroy the tile clicked
+        DestroyImmediate(blockToRemove);
+
+    }
+
+    void SpawnTile(GameObject ghostBlockToChange)
+    {
+        List<GameObject> connections = new List<GameObject>();
+
+        foreach (GameObject tileObject in ghostBlockToChange.transform.GetComponent<GhostBlockScript>().refBlocks)
+        {
+            connections.Add(tileObject.GetComponent<TileScript>().topPoint.gameObject);
+        }
+        //Spawn in the block
+        GameObject spawnedTile = Instantiate(tileprefab, GameObject.FindGameObjectWithTag("Board").transform);
+
+        //Set the connections
+        TileConnectionsScript spawnedTileConnections = spawnedTile.GetComponentInChildren<TileConnectionsScript>();
+        spawnedTileConnections.connections = connections;
+
+        //Set each connection to be connected to this one
+        foreach (GameObject otherCons in connections)
+        {
+            otherCons.GetComponent<TileConnectionsScript>().connections.Add(spawnedTile.GetComponent<TileScript>().topPoint.gameObject);
+        }
+
+        //Set the position
+
+        spawnedTile.transform.position = ghostBlockToChange.transform.position;
+
+        //Set the name
+        spawnedTile.transform.name = "Cube (" + spawnedTile.transform.position.x + "," + spawnedTile.transform.position.z + ")";
+
+        ResetGhostGrid();
+    }
+
+    public void SpawnPushableBlock(GameObject tileToSpawnOn)
+    {
+        TileScript tileScript = tileToSpawnOn.GetComponent<TileScript>();
+        switch (tileScript.Type)
+        {
+            case TileType.Default:
+                GameObject pushableTemp = Instantiate(pushablePrefab, tileScript.topPoint.transform.position, Quaternion.identity);
+                pushableTemp.GetComponent<PlayerMovement>().targetTile = tileScript.topPoint.gameObject;
+
+                break;
+            default:
+                break;
+        }
+        tileScript.Type = TileType.Pushable;
+    }
+
+    void ResetGhostGrid()
+    {
+        RemoveGhostGrid();
+        GenerateGhostGrid();
+    }
 
     #region ToggleGroups
 
@@ -367,9 +459,18 @@ public class LevelCreatorWindow : EditorWindow
 
             gridSetup = EditorGUILayout.Vector2Field("Height and Depth of generated grid", gridSetup);
 
-
-            if (GUILayout.Button(new GUIContent("Generate Level", "This will create a new level \n\n---WARNING---\nThis will destroy your previous level")))
+            string genGridButtonText;
+            if (gridBeenBuilt)
             {
+                genGridButtonText = "Regenerate Grid";
+            }
+            else
+            {
+                genGridButtonText = "Generate Level";
+            }
+            if (GUILayout.Button(new GUIContent(genGridButtonText, "This will create a new level \n\n---WARNING---\nThis will destroy your previous level")))
+            {
+                //Check if everything is ok to spawn in
                 SpawnBaseLevel();
             }
         }
@@ -457,11 +558,13 @@ public class LevelCreatorWindow : EditorWindow
 
     void SettingsToggleGroup()
     {
-        extraSettings = EditorGUILayout.BeginToggleGroup("Extra Settings", extraSettings);
+        
+           extraSettings = EditorGUILayout.BeginToggleGroup("Extra Settings", extraSettings);
         if (extraSettings)
         {
             tileprefab = (GameObject)EditorGUILayout.ObjectField(new GUIContent("Tile Prefab", "The base tile of which the grid will be generated"), tileprefab, typeof(GameObject), false);
             ghostBlock = (GameObject)EditorGUILayout.ObjectField(new GUIContent("Ghost Prefab", "The base tile that will generate when you want to add more to the grid"), ghostBlock, typeof(GameObject), false);
+            pushablePrefab = (GameObject)EditorGUILayout.ObjectField(new GUIContent("Pushable Prefab", "The pushable block"), pushablePrefab, typeof(GameObject), false);
             GUILayout.Space(10);
 
             defaultTileMat = (Material)EditorGUILayout.ObjectField("Normal Tile Material", defaultTileMat, typeof(Material), false);
